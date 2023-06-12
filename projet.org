@@ -131,7 +131,7 @@ un aperçu des 25 premières minutes de cotations du BTC/USDT de l'année 2021.
 #+BEGIN_SRC python :session pres_data :results silent :exports code :tangle pres_data.py
 import pandas as pd
 
-ohlcv_df = pd.read_csv("btc_5m_2021_2023.csv.bz2",
+ohlcv_df = pd.read_csv("btc_5m_2021_2022.csv.bz2",
                        compression="bz2",
                        index_col="time")
 ohlcv_df
