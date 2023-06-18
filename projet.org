@@ -414,7 +414,7 @@ On commence par charger les données.
 #+BEGIN_SRC python :session start :results silent :exports code :tangle start.py
 import pandas as pd
 
-ohlcv_df = pd.read_csv("btc_5m_2021_2023.csv.bz2",
+ohlcv_df = pd.read_csv("btc_5m_2021_2022.csv.bz2",
                        compression="bz2",
                        index_col="time")
 #+END_SRC
@@ -555,7 +555,7 @@ pour prédire les rendements du BTC/USDT :
 indics_df = rsi.to_frame()
 #+END_SRC
 
-Ajoutons deux autres indicateurs RSI en changeant la fenêtre de calcul :
+Ajoutons d'autres indicateurs RSI en changeant la fenêtre de calcul :
 #+BEGIN_SRC python :session start :results silent :exports code :tangle start.py
 indics_df.ta.rsi(close=ohlcv_df["close"], length=5, append=True)
 indics_df.ta.rsi(close=ohlcv_df["close"], length=10, append=True)
@@ -564,10 +564,64 @@ indics_df
 #+END_SRC
 
 
+*** Calcul de l'indicateur MFI
+
+Le [[https://en.wikipedia.org/wiki/Money_flow_index][Money Flow Index (MFI)]] est un indicateur
+variant entre 0 et 100 mesurant la pression d'achat et de vente en tenant compte 
+à la fois des prix et des volumes. Un MFI élevé (proche de 100) est généralement considéré comme
+synonyme d'un actif suracheté, tandis qu'un MFI faible (proche de 0) est généralement considéré
+synonyme d'un actif survendu.
+
+Calculons l'MFI sur une fenêtre de 10 unités de temps.
+#+BEGIN_SRC python :session start :results silent :exports code :tangle start.py
+import pandas_ta as ta
+
+# Calcul du RSI avec une fenêtre d'une journée (24 périodes de 5 minutes)
+mfi = ta.mfi(close=ohlcv_df['close'],
+             high=ohlcv_df['high'],
+             low=ohlcv_df['low'],
+             volume=ohlcv_df['volume'],
+             length=10)
+#+END_SRC
+*Notes :*
+Le calcul de l'MFI nécessite les prix de clôture, du minimum, du maximum et les volumes échangés à
+chaque période. 
+
+Visualisation du MFI sur 1 semaine = 2016*5 min.
+#+BEGIN_SRC python :session start :results silent :exports code :tangle start.py
+fig_mfi = px.line(mfi.head(2016), title=f"{mfi.name}",
+                  markers=True,
+                  labels=dict(
+                      value=mfi.name))
+fig_mfi.update_layout(showlegend=False)
+fig_mfi.update_yaxes(range=[0, 100])
+fig_mfi
+#+END_SRC
+#+BEGIN_SRC python :session start :results html :exports results
+pio.to_html(fig_mfi, include_plotlyjs="cdn",
+            full_html=False,
+            config={'displayModeBar': False})
+#+END_SRC
+
+
+Calcul de différents indicateurs MFI en changeant la fenêtre de calcul :
+#+BEGIN_SRC python :session start :results silent :exports code :tangle start.py
+length_list = [5, 10, 30]
+for length in length_list:
+    indics_df.ta.mfi(close=ohlcv_df['close'],
+                     high=ohlcv_df['high'],
+                     low=ohlcv_df['low'],
+                     volume=ohlcv_df['volume'],
+                     length=length,
+                     append=True)
+#+END_SRC
+
+
+
 *** Analyse exploratoire multivariée
 
 Dans ce projet, le but de l'analyse exploratoire multivariée consiste à identifier d'éventuelles
-liens entre les variables explicatives retenues (pour l'instant des indicateurs de type RSI) et la
+liens entre les variables explicatives retenues et la
 variable cible (rendements à 1h).
 
 Pour ce faire, nous pouvons réaliser une analyse visuelle avec un diagramme en paires.
@@ -575,7 +629,8 @@ Pour ce faire, nous pouvons réaliser une analyse visuelle avec un diagramme en 
 indics_target = pd.concat([indics_df, returns], axis=1)
 
 fig_pairs = px.scatter_matrix(
-    indics_target,
+    indics_target.head(-10000),
+    color="r12",
     title="Diagramme en paire")
 fig_pairs
 #+END_SRC
@@ -584,6 +639,7 @@ pio.to_html(fig_pairs, include_plotlyjs="cdn",
             full_html=False,
             config={'displayModeBar': False})
 #+END_SRC
+
 
 *Questions :*
 - Quelles sont les informations à retenir de cette première analyse visuelle ?
